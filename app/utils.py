@@ -1,56 +1,69 @@
-import os
-import json
-from git import Repo
-import fasttext
+import requests
+import re
+import gensim
+import gensim.downloader as api
+from gensim import corpora
+from sklearn.manifold import MDS
 import numpy as np
-import scipy.spatial
-import glob
+import pandas as pd
+import json
+import os
+import fasttext
 
-def clone_repo(repo_url, tag):
-    dir_name = f'repo_{tag}'
-    if not os.path.exists(dir_name):
-        repo = Repo.clone_from(repo_url, dir_name)
-        repo.git.checkout(tag)
-    return dir_name
+# Fetch files from GitHub
+def fetch_file_from_github(url):
+    response = requests.get(url)
+    response.raise_for_status()
+    return response.text
 
-def preprocess_code(directory):
-    cache_file = os.path.join(directory, 'preprocessed.json')
+# Preprocess text data, excluding programming keywords
+def preprocess_content(content):
+    programming_keywords = {
+        'import', 'class', 'def', 'return', 'public', 'private', 'protected',
+        'package', 'static', 'void', 'new', 'extends', 'implements', 'int',
+        'float', 'double', 'char', 'boolean', 'if', 'else', 'switch', 'case',
+        'default', 'while', 'for', 'do', 'break', 'continue', 'goto', 'const',
+        'enum', 'struct', 'typedef', 'union', 'this', 'super', 'throw', 'throws',
+        'try', 'catch', 'finally', 'abstract', 'synchronized', 'volatile', 'transient',
+        'final', 'native', 'strictfp', 'interface', 'lambda', 'module', 'requires',
+        'exports', 'instanceof', 'async', 'await', 'var', 'let', 'const',
+        'function', 'yield', 'null', 'true', 'false', 'undefined', 'delete',
+        'typeof', 'void', 'new', 'in', 'of', 'from', 'export', 'import', 'as',
+        'with', 'yield', 'assert', 'pass', 'global', 'nonlocal', 'del', 'exec',
+        'print', 'lambda', 'raise', 'yield', 'except', 'finally', 'try',
+        'java', 'python', 'c++', 'ruby', 'javascript', 'typescript', 'scala',
+        'kotlin', 'swift', 'go', 'rust', 'php', 'perl', 'bash', 'shell','string'
+    }
+
+    return [token.lower() for token in re.split(r'\W+', content) if (len(token) > 2 and token.lower() not in programming_keywords)]
+
+# Perform analysis
+def analyze_code(file_urls):
+    # Extract file names from URLs
+    sheet_names = [url.split('/')[-1].replace('.java', '') for url in file_urls]
     
-    if os.path.exists(cache_file):
-        with open(cache_file, 'r') as f:
-            file_contents = json.load(f)
-        return file_contents
+    # Fetch and preprocess the text documents
+    files_content = [preprocess_content(fetch_file_from_github(url)) for url in file_urls]
 
-    file_contents = {}
-    for extension in ["*.java", "*.py", "*.cpp", "*.h"]:
-        for file_path in glob.glob(f"{directory}/**/{extension}", recursive=True):
-            with open(file_path, 'r', encoding='utf-8') as file:
-                content = file.read()
-                file_contents[file_path] = content
+    # Create a dictionary and corpus for LDA analysis
+    dictionary = corpora.Dictionary(files_content) 
+    corpus = [dictionary.doc2bow(text) for text in files_content]
 
-    with open(cache_file, 'w') as f:
-        json.dump(file_contents, f)
-    
-    return file_contents
+    # Load a pretrained word embedding model from gensim
+    model = api.load("glove-wiki-gigaword-50")
 
-def compute_similarity(files):
-    model_path = 'models/cc.en.300.bin'
-    model = fasttext.load_model(model_path)
-    
-    def get_embedding(text):
-        words = text.split()
-        word_embeddings = [model[word] for word in words if word in model]
-        if word_embeddings:
-            return np.mean(word_embeddings, axis=0)
-        return np.zeros(model.get_dimension())
+    # Calculate Word Mover's Distance between each pair of documents and label them with sheet names
+    wmd_results = []
+    for i in range(len(files_content)):
+        for j in range(i + 1, len(files_content)):
+            distance = model.wmdistance(files_content[i], files_content[j])
+            wmd_results.append((f'{sheet_names[i]} vs {sheet_names[j]}', distance))
 
-    embeddings = {path: get_embedding(content) for path, content in files.items()}
-    similarities = {}
-    paths = list(embeddings.keys())
-    
-    for i in range(len(paths)):
-        for j in range(i + 1, len(paths)):
-            sim = 1 - scipy.spatial.distance.cosine(embeddings[paths[i]], embeddings[paths[j]])
-            similarities[f"{paths[i]} vs {paths[j]}"] = sim
-    
-    return similarities
+    # Generate a scatter plot using Multidimensional Scaling (MDS)
+    mds = MDS(n_components=2, dissimilarity="precomputed", random_state=6)
+    wmd_distances = [[model.wmdistance(doc1, doc2) for doc2 in files_content] for doc1 in files_content]
+    mds_coords = mds.fit_transform(wmd_distances)
+    fig = px.scatter(x=mds_coords[:, 0], y=mds_coords[:, 1], text=sheet_names)
+    fig.update_traces(marker=dict(size=12, line=dict(width=2, color='DarkSlateGrey')),
+                      selector=dict(mode='markers+text'))
+    return wmd_results, fig

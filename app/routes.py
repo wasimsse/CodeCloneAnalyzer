@@ -1,6 +1,6 @@
 from flask import Blueprint, request, render_template, jsonify
 from flask_socketio import emit
-from .utils import clone_repo, preprocess_code, compute_similarity
+from .utils import clone_repo, preprocess_code, compute_similarity, analyze_code
 from . import socketio
 import logging
 
@@ -17,28 +17,27 @@ def analyze():
     try:
         repo_url = request.form['repo_url']
         tag = request.form['tag']
-        socketio.start_background_task(target=analyze_repo, repo_url=repo_url, tag=tag)
+        file_urls = [
+            f'{repo_url}/blob/{tag}/src/main/java/depends/extractor/ruby/jruby/JRubyVisitor.java',
+            f'{repo_url}/blob/{tag}/src/main/java/depends/extractor/ruby/jruby/JRubyFileParser.java',
+            f'{repo_url}/blob/{tag}/src/main/java/depends/extractor/python/BasePythonProcessor.java',
+            f'{repo_url}/blob/{tag}/src/main/java/depends/extractor/cpp/CppProcessor.java'
+        ]
+        socketio.start_background_task(target=analyze_repo, file_urls=file_urls)
         return render_template('progress.html')
     except Exception as e:
         logging.error("Error during analysis: %s", e)
         return render_template('index.html', error=str(e))
 
-def analyze_repo(repo_url, tag):
+def analyze_repo(file_urls):
     try:
-        emit_progress("Cloning repository...", 10)
-        files = clone_repo(repo_url, tag)
-        
-        emit_progress("Preprocessing code...", 30)
-        preprocessed_files = preprocess_code(files)
-        
-        emit_progress("Computing similarities...", 70)
-        similarity_results = compute_similarity(preprocessed_files)
+        emit_progress("Analyzing code...", 50)
+        wmd_results, fig = analyze_code(file_urls)
         
         emit_progress("Analysis complete.", 100)
         global last_results
-        last_results = similarity_results
-        global preprocessed_data
-        preprocessed_data = preprocessed_files
+        last_results = wmd_results
+        fig.write_html("static/plot.html")
         socketio.emit('analysis_complete', {'status': 'complete'})
     except Exception as e:
         logging.error("Error in background analysis task: %s", e)
@@ -55,6 +54,10 @@ def handle_connect():
 def results():
     global last_results
     return render_template('results.html', results=last_results)
+
+@bp.route('/view_plot')
+def view_plot():
+    return render_template('plot.html')
 
 @bp.route('/view_preprocessed')
 def view_preprocessed():

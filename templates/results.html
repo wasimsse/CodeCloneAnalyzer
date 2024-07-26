@@ -17,7 +17,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for file_pair, similarity in results.items() %}
+                {% for file_pair, similarity in results %}
                 <tr>
                     <td>{{ file_pair }}</td>
                     <td>{{ similarity }}</td>
@@ -25,6 +25,7 @@
                 {% endfor %}
             </tbody>
         </table>
+        <a href="/view_plot" class="btn btn-primary">View Plot</a>
         {% else %}
         <p>No results to display.</p>
         {% endif %}

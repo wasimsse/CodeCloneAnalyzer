@@ -1,39 +1,33 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Code Clone Analyzer Results</title>
-    <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        table, th, td {
-            border: 1px solid black;
-        }
-        th, td {
-            padding: 10px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-    </style>
+    <title>Analysis Results</title>
+    <!-- Include Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body>
-    <h1>Code Clone Analyzer Results</h1>
-    <table>
-        <tr>
-            <th>File Pair</th>
-            <th>Similarity Score</th>
-        </tr>
-        {% for pair, score in results.items() %}
-        <tr>
-            <td>{{ pair }}</td>
-            <td>{{ score }}</td>
-        </tr>
-        {% endfor %}
-    </table>
-    <br>
-    <a href="/">Back to Home</a>
+    <div class="container mt-5">
+        <h1>Analysis Results</h1>
+        {% if results %}
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>File Pair</th>
+                    <th>Similarity</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for file_pair, similarity in results.items() %}
+                <tr>
+                    <td>{{ file_pair }}</td>
+                    <td>{{ similarity }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No results to display.</p>
+        {% endif %}
+    </div>
 </body>
 </html>

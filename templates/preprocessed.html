@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Preprocessed Data</title>
+    <!-- Include Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        pre {
+            white-space: pre-wrap; /* Wrap the text in the pre tag */
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Preprocessed Data</h1>
+        {% if preprocessed_data %}
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>File Path</th>
+                    <th>Content</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for file_path, content in preprocessed_data.items() %}
+                <tr>
+                    <td>{{ file_path }}</td>
+                    <td><pre>{{ content }}</pre></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No preprocessed data available.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

@@ -1,0 +1,6 @@
+flask
+gensim
+fasttext
+scikit-learn
+gitpython
+flake8

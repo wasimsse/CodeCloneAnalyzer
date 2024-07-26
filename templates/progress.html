@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Code Clone Analyzer Progress</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.3/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Analysis in Progress</h1>
+    <div id="progress">
+        <p>Please wait while we analyze the repository...</p>
+    </div>
+    <script>
+        var socket = io();
+        socket.on('analysis_complete', function(results) {
+            var resultsDiv = document.getElementById('progress');
+            resultsDiv.innerHTML = '<h2>Analysis Complete</h2>';
+            resultsDiv.innerHTML += '<a href="/results">View Results</a>';
+        });
+    </script>
+</body>
+</html>

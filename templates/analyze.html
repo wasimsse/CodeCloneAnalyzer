@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Analysis in Progress</title>
+    <!-- Include Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script>
+        // JavaScript to update progress
+        let progress = 0;
+        function updateProgress() {
+            progress += 10;
+            document.getElementById("progress-bar").style.width = progress + "%";
+            if (progress < 100) {
+                setTimeout(updateProgress, 1000); // Update every second
+            }
+        }
+        window.onload = function() {
+            updateProgress();
+        };
+    </script>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Analysis in Progress</h1>
+        <p>Please wait while we analyze the repository...</p>
+        <div class="progress">
+            <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" style="width:0%"></div>
+        </div>
+    </div>
+</body>
+</html>

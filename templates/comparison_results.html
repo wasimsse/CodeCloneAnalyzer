@@ -17,29 +17,44 @@
                 </tr>
             </thead>
             <tbody>
-                {% for row in results %}
-                    <tr>
-                        <td>{{ row[0] }}</td>
-                        <td>{{ row[1] }}</td>
-                    </tr>
+                {% for row in wmd_df %}
+                <tr>
+                    <td>{{ row['Document Pair'] }}</td>
+                    <td>{{ row['WMD Distance'] }}</td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>
-        <div>
-            <h2>MDS Plot</h2>
-            <div id="mds-plot"></div>
-        </div>
+
+        <h2>Explanation of WMD Distance</h2>
+        <p>The Word Mover’s Distance (WMD) is a measure of the dissimilarity between two text documents. It is based on the concept of moving words from one document to another. The smaller the WMD distance, the more similar the documents are. In this table, each row represents the WMD distance between two documents, identified by their pair number.</p>
+
+        <h2>MDS Plot</h2>
+        <p>The Multidimensional Scaling (MDS) plot is a visualization that positions the documents in a 2-dimensional space based on their pairwise distances. Points that are closer together represent documents that are more similar according to the WMD distance. This visualization helps to understand the relative similarities between multiple documents at a glance.</p>
+
+        <div id="plot"></div>
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <script>
+            var trace = {
+                x: {{ mds_coords | safe }}.map(coord => coord[0]),
+                y: {{ mds_coords | safe }}.map(coord => coord[1]),
+                mode: 'markers+text',
+                type: 'scatter',
+                text: {{ wmd_df | map(attribute='Document Pair') | list | safe }},
+                marker: { size: 12, line: { width: 2, color: 'DarkSlateGrey' } }
+            };
+
+            var data = [trace];
+
+            var layout = {
+                title: 'MDS Plot',
+                xaxis: { title: 'MDS Dimension 1' },
+                yaxis: { title: 'MDS Dimension 2' },
+                showlegend: false
+            };
+
+            Plotly.newPlot('plot', data, layout);
+        </script>
     </div>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <script>
-        var mds_coords = {{ mds_coords|safe }};
-        var data = [{
-            x: mds_coords.map(coord => coord[0]),
-            y: mds_coords.map(coord => coord[1]),
-            mode: 'markers',
-            type: 'scatter'
-        }];
-        Plotly.newPlot('mds-plot', data);
-    </script>
 </body>
 </html>

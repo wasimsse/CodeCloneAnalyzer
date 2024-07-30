@@ -1,0 +1,7 @@
+file,similarity,common_words,ref_word_count,comp_word_count
+https://raw.githubusercontent.com/multilang-depends/depends/933150b0263ad30b633314eba66a29037ef6e884/src/main/java/depends/extractor/ruby/jruby/JRubyFileParser.java,0.19771863117870722,156,789,310
+"
+https://raw.githubusercontent.com/multilang-depends/depends/933150b0263ad30b633314eba66a29037ef6e884/src/main/java/depends/extractor/python/BasePythonProcessor.java",0.029150823827629912,23,789,108
+"
+https://raw.githubusercontent.com/multilang-depends/depends/933150b0263ad30b633314eba66a29037ef6e884/src/main/java/depends/extractor/cpp/CppProcessor.java
+",0.0,0,789,3

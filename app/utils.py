@@ -7,7 +7,10 @@ import gensim.downloader as api
 from gensim import corpora
 from sklearn.manifold import MDS
 import pandas as pd
-import plotly.express as px  # Correct the import here
+import plotly.express as px
+from flask_socketio import emit
+import zipfile
+import io
 
 # Function to fetch files from GitHub
 def fetch_file_from_github(url):
@@ -54,7 +57,7 @@ def clone_repo(repo_url, tag):
     files = []
     for root, dirs, filenames in os.walk(repo_path):
         for filename in filenames:
-            if filename.endswith('.java'):
+            if filename.endswith('.java') or filename.endswith('.py') or filename.endswith('.cpp'):
                 with open(os.path.join(root, filename), 'r', encoding='utf-8') as f:
                     files.append(f.read())
     return files
@@ -79,7 +82,7 @@ def compute_similarity(files_content):
     
     return wmd_df, mds_coords
 
-# Function to analyze code
+# Function to analyze code from URLs
 def analyze_code():
     file_urls = [
         'https://raw.githubusercontent.com/multilang-depends/depends/933150b0263ad30b633314eba66a29037ef6e884/src/main/java/depends/extractor/ruby/jruby/JRubyVisitor.java',
@@ -97,3 +100,74 @@ def analyze_code():
     fig.show()
 
     return wmd_df
+
+# Function to fetch GitHub releases
+def fetch_github_releases(repo_name):
+    url = f'https://api.github.com/repos/{repo_name}/releases'
+    response = requests.get(url)
+    response.raise_for_status()
+    return response.json()
+
+# Function to analyze code from a repo URL and tag
+def analyze_code_repo(repo_url, tag):
+    zip_url = f'https://codeload.github.com/{repo_url}/zip/refs/tags/{tag}'
+    response = requests.get(zip_url)
+    response.raise_for_status()
+
+    with zipfile.ZipFile(io.BytesIO(response.content)) as z:
+        z.extractall('repo')
+
+    repo_dir = f'repo/{tag}'
+    file_contents = []
+
+    for root, _, files in os.walk(repo_dir):
+        for file in files:
+            if file.endswith('.py') or file.endswith('.java') or file.endswith('.cpp'):
+                with open(os.path.join(root, file), 'r', encoding='utf-8', errors='ignore') as f:
+                    file_contents.append(f.read())
+
+    model = FastText(sentences=[content.split() for content in file_contents], vector_size=100, window=3, min_count=1, workers=4)
+    embeddings = [model.wv[word] for content in file_contents for word in content.split() if word in model.wv]
+    mds = MDS(n_components=2, random_state=0)
+    coords = mds.fit_transform(embeddings)
+
+    df = pd.DataFrame(coords, columns=['x', 'y'])
+    df.to_csv('data/analysis_result.csv', index=False)
+
+    fig = px.scatter(df, x='x', y='y', title='Code Analysis Result')
+    fig.write_html('templates/results.html')
+
+    return 'Analysis complete. See results.html for the visualization.'
+
+# Function to compare reference file with comparison files
+def compare_files(ref_file_url, comp_file_urls):
+    ref_file = requests.get(ref_file_url).text
+    comp_files = [requests.get(url).text for url in comp_file_urls]
+
+    ref_words = ref_file.split()
+    ref_word_count = len(ref_words)
+    ref_word_set = set(ref_words)
+
+    comparison_results = []
+
+    for url, comp_file in zip(comp_file_urls, comp_files):
+        comp_words = comp_file.split()
+        comp_word_count = len(comp_words)
+        common_words = ref_word_set.intersection(comp_words)
+        similarity = len(common_words) / ref_word_count
+
+        comparison_results.append({
+            "file": url,
+            "similarity": similarity,
+            "common_words": len(common_words),
+            "ref_word_count": ref_word_count,
+            "comp_word_count": comp_word_count
+        })
+
+    df = pd.DataFrame(comparison_results)
+    df.to_csv('data/comparison_results.csv', index=False)
+
+    fig = px.bar(df, x='file', y='similarity', title='File Comparison Results')
+    fig.write_html('templates/comparison_results.html')
+
+    return comparison_results

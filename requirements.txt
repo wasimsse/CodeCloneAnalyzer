@@ -1,6 +1,8 @@
-flask
-gensim
-fasttext
-scikit-learn
+Flask
+Flask-SocketIO
+requests
 gitpython
-flake8
+gensim
+scikit-learn
+pandas
+plotly
